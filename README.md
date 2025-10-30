@@ -20,6 +20,7 @@ Ele foi criado como um projeto de demonstração para integrar backend, frontend
 - Ambiente        | *Python 3.10*
 
 ## 📁 Estrutura do Projeto
+```
 ChatBot-Leonardo/
 ├── README.md
 ├── .gitignore              
@@ -31,6 +32,7 @@ ChatBot-Leonardo/
     ├── app.py
     ├── requirements.txt
     └── .env.example 
+```
 ---
 
 ##  Como Rodar o Projeto (Passo a Passo Completo)

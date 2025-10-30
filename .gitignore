@@ -1,4 +1,3 @@
-.venv/
 _pycache_/
 *.py[cod]
 *.pyo
@@ -6,15 +5,14 @@ _pycache_/
 *.so
 *.egg-info/
 
+.venv/
+venv/
 
-chat.db
-.env
-.env.*
+backend/chat.db
 
+backend/.env
 
-*.log
-logs/
-*.tmp
+!backend/.env.example
 
 
 node_modules/
@@ -22,6 +20,9 @@ dist/
 build/
 *.cache
 
+*.log
+logs/
+*.tmp
 .vscode/
 .idea/
 .DS_Store
