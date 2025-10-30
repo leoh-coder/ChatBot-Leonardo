@@ -1,5 +1,4 @@
 const API = "http://127.0.0.1:8010";
-
 let current = null;
 
 const list = document.getElementById("list");
@@ -10,12 +9,21 @@ const sendBtn = document.getElementById("sendBtn");
 const renameBtn = document.getElementById("renameBtn");
 const deleteBtn = document.getElementById("deleteBtn");
 
-function setComposerEnabled(on){ input.disabled = !on; sendBtn.disabled = !on; }
-function setActionButtonsEnabled(on){ renameBtn.disabled = !on; deleteBtn.disabled = !on; }
-function toast(msg){ console.log("[UI]", msg); }
+function setComposerEnabled(on) {
+  input.disabled = !on;
+  sendBtn.disabled = !on;
+}
+function setActionButtonsEnabled(on) {
+  renameBtn.disabled = !on;
+  deleteBtn.disabled = !on;
+}
+function toast(msg) {
+  console.log("[UI]", msg);
+}
 
-window.onerror = (m,f,l,c,e)=>{ console.error("JS erro:", m, f, l, c, e); };
-
+window.onerror = (m, f, l, c, e) => {
+  console.error("JS erro:", m, f, l, c, e);
+};
 async function api(path, opts = {}) {
   const r = await fetch(API + path, opts).catch(e => {
     throw new Error("Falha de rede/CORS: " + e.message);
@@ -27,11 +35,11 @@ async function api(path, opts = {}) {
   return r.json();
 }
 
-// checa backend
 (async () => {
   try { await api("/ping"); }
   catch (e) { toast("Backend inacessível: " + e.message); }
 })();
+
 
 async function loadConversations(selectId = null) {
   try {
@@ -40,8 +48,8 @@ async function loadConversations(selectId = null) {
     data.forEach(c => {
       const div = document.createElement("div");
       div.className = "conv" + (current && current.id === c.id ? " active" : "");
-      // NÃO mostra ID:
       div.textContent = c.title;
+      div.dataset.id = c.id;   
       div.onclick = () => selectConversation(c);
       list.appendChild(div);
     });
@@ -70,11 +78,12 @@ async function loadConversations(selectId = null) {
 
 async function selectConversation(c) {
   current = c;
-  convTitle.textContent = c.title;        // sem ID
-  // atualiza destaque na lista
+  convTitle.textContent = c.title;
+
   [...document.querySelectorAll(".conv")].forEach(el => {
-    el.classList.toggle("active", el.textContent === c.title);
+    el.classList.toggle("active", Number(el.dataset.id) === c.id);
   });
+
   setComposerEnabled(true);
   setActionButtonsEnabled(true);
   await loadMessages();
@@ -183,6 +192,7 @@ document.getElementById("composer").addEventListener("submit", async (e) => {
     input.focus();
   }
 });
+
 
 loadConversations();
 window.addEventListener("focus", () => current && loadMessages());
