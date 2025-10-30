@@ -23,49 +23,68 @@ Copie e cole *cada bloco de código no terminal*, na ordem abaixo 👇
 ```bash
 git clone https://github.com/leoh-coder/ChatBot-Leonardo.git
 cd ChatBot-Leonardo
-'''
 
 
-### 2️⃣ Criar e ativar o ambiente virtual (Windows)
-```bash
+---
+
+2️⃣ Criar e ativar o ambiente virtual (Windows)
+
 python -m venv .venv
 .venv\Scripts\activate
-'''
 
-### 3️⃣ Instalar as dependências
-```bash
+
+---
+
+3️⃣ Instalar as dependências
+
 pip install -r requirements.txt
-'''
 
-### 4️⃣ Criar o arquivo .env (variáveis secretas)
-```bash
-#- Copie o arquivo .env.example e renomeie para .env
-# - Depois abra o .env e adicione sua chave real da API:
+
+---
+
+4️⃣ Criar o arquivo .env (variáveis secretas)
+
+# Copie o arquivo .env.example e renomeie para .env
+# Depois abra o .env e adicione sua chave real da API:
 # GEMINI_API_KEY=sua_chave_aqui
 # GEMINI_MODEL=gemini-2.5-flash
-'''
 
-### 5️⃣ Iniciar o servidor backend (FastAPI)
-```bash
+
+---
+
+⚡ 5️⃣ Iniciar o servidor backend (FastAPI)
+
 uvicorn app:app --reload --port 8010
-'''
 
-### 6️⃣ Em outro terminal, iniciar o servidor frontend (HTML)
-```bash
+
+---
+
+🌐 6️⃣ Em outro terminal, iniciar o servidor frontend (HTML)
+
 python -m http.server 5500
-'''
 
-### 7️⃣ Abrir no navegador
-```bash
-#  Acesse: http://127.0.0.1:5500
+
+---
+
+🧠 7️⃣ Abrir no navegador
+
+# Acesse: http://127.0.0.1:5500
 # O frontend se conecta automaticamente à API (http://127.0.0.1:8010)
-'''
-- Autor
-Desenvolvido por: Leonardo Henrique Ramos Ferreira 
 
-- Estudante de Análise e Desenvolvimento de Sistemas
-- Focado em IA, Ciência e Engenharia de Dados
-- Projeto criado para demonstração técnica.
+
+---
+
+👨‍💻 Autor
+
+Desenvolvido por: Leonardo Henrique Ramos Ferreira
+
+Estudante de Análise e Desenvolvimento de Sistemas
+
+Focado em IA, Ciência e Engenharia de Dados
+
+Projeto criado para demonstração técnica
+
 
 © 2025 Leonardo Henrique Ramos Ferreira — Todos os direitos reservados.
 
+---
