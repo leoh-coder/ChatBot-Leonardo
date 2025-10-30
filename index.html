@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>ChatBot-Leonardo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --muted:#9ca3af; --text:#e5e7eb; --accent:#22c55e; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto; }
+    .app { display:grid; grid-template-columns: 280px 1fr; height:100vh; }
+    .side { background:var(--panel); border-right:1px solid #1f2937; display:flex; flex-direction:column; }
+    .side h2 { margin:16px; font-size:16px; color:#fff; }
+    .side form { display:flex; gap:8px; padding:0 16px 16px; }
+    .side input[type="text"] { flex:1; padding:8px; border-radius:10px; border:1px solid #374151; background:#0b1220; color:var(--text); }
+    .side button { padding:8px 12px; border-radius:10px; border:0; background:var(--accent); color:#052e12; font-weight:700; cursor:pointer; }
+    .list { overflow:auto; padding:8px; display:flex; flex-direction:column; gap:6px; }
+    .conv { padding:10px 12px; border-radius:12px; background:#0b1220; border:1px solid #1f2937; cursor:pointer; }
+    .conv.active { outline:2px solid var(--accent); }
+    .main { display:flex; flex-direction:column; height:100%; }
+    .header { padding:12px 16px; border-bottom:1px solid #1f2937; display:flex; align-items:center; gap:10px; }
+    .header .id { color:var(--muted); }
+    .header button { padding: 6px 10px; border-radius: 8px; border: 0; color: #fff; font-weight: 700; cursor: pointer; }
+    .msgs { flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
+    .bubble { max-width:70%; padding:10px 12px; border-radius:14px; white-space:pre-wrap; }
+    .user { align-self:flex-end; background:#1f2937; }
+    .assistant { align-self:flex-start; background:#0b1220; border:1px solid #1f2937; }
+    .composer { display:flex; gap:8px; padding:12px; border-top:1px solid #1f2937; }
+    .composer textarea { flex:1; resize:vertical; min-height:44px; max-height:160px; padding:10px; border-radius:10px; border:1px solid #374151; background:#0b1220; color:var(--text); }
+    .composer button { padding:10px 14px; border-radius:10px; border:0; background:var(--accent); color:#052e12; font-weight:800; cursor:pointer; }
+    .empty { color:var(--muted); padding:20px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <h2>Conversas</h2>
+      <form id="newConv">
+        <input id="title" type="text" placeholder="Título da conversa" required />
+        <button type="submit">Criar</button>
+      </form>
+      <div id="list" class="list"></div>
+    </aside>
+    <main class="main">
+      <div class="header">
+        <div><strong id="convTitle">Selecione uma conversa</strong></div>
+        <div class="id" id="convId"></div>
+        <div style="margin-left: auto; display: flex; gap: 8px;">
+            <button id="renameBtn" style="background:#f97316;" disabled>Renomear</button>
+            <button id="deleteBtn" style="background:#ef4444;" disabled>Apagar</button>
+        </div>
+      </div>
+      <div id="msgs" class="msgs">
+        <div class="empty">Sem conversa selecionada.</div>
+      </div>
+      <form id="composer" class="composer">
+        <textarea id="input" placeholder="Escreva sua mensagem..." disabled required></textarea>
+        <button id="sendBtn" disabled>Enviar</button>
+      </form>
+    </main>
+  </div>
+
+<script>
+  const API = "http://127.0.0.1:8010";
+
+  let current = null;
+
+  function setComposerEnabled(on){ input.disabled = !on; sendBtn.disabled = !on; }
+  function setActionButtonsEnabled(on){ renameBtn.disabled = !on; deleteBtn.disabled = !on; }
+  function toast(msg){ console.log("[UI]", msg); }
+
+  const list = document.getElementById("list");
+  const convTitle = document.getElementById("convTitle");
+  const convId = document.getElementById("convId");
+  const msgs = document.getElementById("msgs");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("sendBtn");
+  const renameBtn = document.getElementById("renameBtn");
+  const deleteBtn = document.getElementById("deleteBtn");
+
+  window.onerror = (m,f,l,c,e)=>{ console.error("JS erro:", m, f, l, c, e); };
+
+  async function api(path, opts = {}) {
+    const r = await fetch(API + path, opts).catch(e => {
+      throw new Error("Falha de rede/CORS: " + e.message);
+    });
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      throw new Error(`HTTP ${r.status} ${r.statusText} | ${t}`);
+    }
+    return r.json();
+  }
+
+  (async () => {
+    try { await api("/ping"); }
+    catch (e) { toast("Backend inacessível: " + e.message); }
+  })();
+
+  async function loadConversations(selectId = null) {
+    try {
+      const data = await api("/conversations");
+      list.innerHTML = "";
+      data.forEach(c => {
+        const div = document.createElement("div");
+        div.className = "conv" + (current && current.id === c.id ? " active" : "");
+        div.textContent = `#${c.id} — ${c.title}`;
+        div.onclick = () => selectConversation(c);
+        list.appendChild(div);
+      });
+
+      if (selectId) {
+        const found = data.find(x => x.id === selectId);
+        if (found) await selectConversation(found);
+      } else if (current) {
+        const keep = data.find(x => x.id === current.id);
+        if (keep) await selectConversation(keep);
+      } else if (data.length) {
+        await selectConversation(data[0]);
+      } else {
+        current = null;
+        convTitle.textContent = "Selecione uma conversa";
+        convId.textContent = "";
+        msgs.innerHTML = '<div class="empty">Sem conversa selecionada.</div>';
+        setComposerEnabled(false);
+        setActionButtonsEnabled(false);
+      }
+    } catch (e) {
+      setComposerEnabled(false);
+      setActionButtonsEnabled(false);
+      toast("Erro ao listar conversas: " + e.message);
+    }
+  }
+
+  async function selectConversation(c) {
+    current = c;
+    convTitle.textContent = c.title;
+    convId.textContent = `(id ${c.id})`;
+    [...document.querySelectorAll(".conv")].forEach(el => {
+      el.classList.toggle("active", el.textContent.startsWith(`#${c.id} —`));
+    });
+    setComposerEnabled(true);
+    setActionButtonsEnabled(true);
+    await loadMessages();
+  }
+
+  async function loadMessages() {
+    if (!current) return;
+    try {
+      const data = await api(`/conversations/${current.id}/messages`);
+      msgs.innerHTML = "";
+      if (!data.length) {
+        msgs.innerHTML = '<div class="empty">Sem mensagens ainda.</div>';
+        return;
+      }
+      data.forEach(m => {
+        const div = document.createElement("div");
+        div.className = "bubble " + (m.role === "user" ? "user" : "assistant");
+        div.textContent = m.content;
+        msgs.appendChild(div);
+      });
+      msgs.scrollTop = msgs.scrollHeight;
+    } catch (e) {
+      toast("Erro ao carregar mensagens: " + e.message);
+    }
+  }
+
+  document.getElementById("newConv").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const titleEl = document.getElementById("title");
+    const title = titleEl.value.trim() || "Nova conversa";
+    try {
+      const res = await api("/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title })
+      });
+      titleEl.value = "";
+      await loadConversations(res.id);
+    } catch (e) {
+      toast("Erro ao criar conversa: " + e.message);
+    }
+  });
+
+  renameBtn.addEventListener("click", async () => {
+    if (!current) return;
+    const newTitle = prompt("Novo título:", current.title);
+    if (!newTitle || newTitle.trim() === current.title) return;
+    try {
+      await api(`/conversations/${current.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle.trim() })
+      });
+      await loadConversations(current.id);
+    } catch (e) {
+      toast("Erro ao renomear: " + e.message);
+    }
+  });
+
+  deleteBtn.addEventListener("click", async () => {
+    if (!current) return;
+    if (!confirm(`Apagar "${current.title}" (ID ${current.id})?`)) return;
+    try {
+      await api(`/conversations/${current.id}`, { method: "DELETE" });
+      current = null;
+      await loadConversations();
+    } catch (e) {
+      toast("Erro ao apagar: " + e.message);
+    }
+  });
+
+  document.getElementById("composer").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!current) return toast("Selecione ou crie uma conversa primeiro.");
+    const text = input.value.trim();
+    if (!text) return;
+
+    const u = document.createElement("div");
+    u.className = "bubble user";
+    u.textContent = text;
+    msgs.appendChild(u);
+    msgs.scrollTop = msgs.scrollHeight;
+    input.value = "";
+    setComposerEnabled(false);
+    setActionButtonsEnabled(false);
+
+    try {
+      const res = await api("/chat/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversation_id: current.id, message: text })
+      });
+      const a = document.createElement("div");
+      a.className = "bubble assistant";
+      a.textContent = res.reply || "(sem resposta)";
+      msgs.appendChild(a);
+      msgs.scrollTop = msgs.scrollHeight;
+    } catch (err) {
+      const a = document.createElement("div");
+      a.className = "bubble assistant";
+      a.textContent = "Erro ao enviar: " + err.message;
+      msgs.appendChild(a);
+    } finally {
+      setComposerEnabled(true);
+      setActionButtonsEnabled(true);
+      input.focus();
+    }
+  });
+
+  loadConversations();
+  window.addEventListener("focus", () => current && loadMessages());
+</script>
+</body>
+</html>
